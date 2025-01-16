@@ -26,6 +26,8 @@ app.use('/api/v1/users', userRouter);
 app.use('*', (req, res, next) => {
   next(new appError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
-//GLOBAL ERROR HANDLING
+
+// GLOBAL ERROR HANDLING
 app.use(globalErrorHandler);
+
 module.exports = app;
