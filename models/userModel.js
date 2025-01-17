@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcryptjs');
-
+const crypto = require('crypto');
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -17,6 +17,13 @@ const userSchema = new mongoose.Schema({
     validate: [validator.isEmail, 'Please enter a valid email']
   },
   photo: String,
+
+  role: {
+    type: String,
+    enum: ['admin', 'user', 'lead-guide', 'guide'],
+    default: 'user'
+  },
+
   password: {
     type: String,
     required: [true, 'Enter your password'],
@@ -35,7 +42,9 @@ const userSchema = new mongoose.Schema({
     },
     select: false
   },
-  passwordChangedAt: Date
+  passwordChangedAt: Date,
+  passwordResetToken: String,
+  tokenExpiryTime: Date
 });
 
 // Pre-save middleware to hash password
@@ -68,6 +77,17 @@ userSchema.methods.changedPasswordAt = function(JWTTimestamp) {
   //this means there were not change in password
   return false;
 };
+userSchema.methods.createPasswordResetToken = function() {
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  this.passwordResetToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+  this.tokenExpiryTime = Date.now() + 10 * 60 * 1000;
+  console.log({ resetToken }, this.passwordResetToken, this.tokenExpiryTime);
+  return resetToken;
+};
+
 const User = mongoose.model('User', userSchema);
 
 module.exports = User;
