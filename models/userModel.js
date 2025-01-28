@@ -44,7 +44,12 @@ const userSchema = new mongoose.Schema({
   },
   passwordChangedAt: Date,
   passwordResetToken: String,
-  tokenExpiryTime: Date
+  tokenExpiryTime: Date,
+  active: {
+    type: Boolean,
+    default: true,
+    select: false
+  }
 });
 
 // Pre-save middleware to hash password
@@ -60,7 +65,15 @@ userSchema.pre('save', async function(next) {
 
   next();
 });
-
+userSchema.pre('save', function(next) {
+  if (!this.isModified('password') || this.isNew) return next();
+  this.passwordChangedAt = Date.now() - 1000;
+  next();
+});
+userSchema.pre(/^find/, function(next) {
+  this.find({ active: { $ne: false } });
+  next();
+});
 // Instance method to check if provided password is correct
 userSchema.methods.correctPassword = async function(
   candidatePassword,
@@ -84,7 +97,6 @@ userSchema.methods.createPasswordResetToken = function() {
     .update(resetToken)
     .digest('hex');
   this.tokenExpiryTime = Date.now() + 10 * 60 * 1000;
-  console.log({ resetToken }, this.passwordResetToken, this.tokenExpiryTime);
   return resetToken;
 };
 
